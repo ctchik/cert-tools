@@ -94,7 +94,6 @@ def create_unsigned_certificates_from_roster(config):
         with open(template) as template:
             cert_str = template.read()
             template = json.loads(cert_str)
-            cur = 0
             for recipient in recipients:
                 if config.filename_format == "certname_identity":
                     uid = template['badge']['name'] + recipient.identity
