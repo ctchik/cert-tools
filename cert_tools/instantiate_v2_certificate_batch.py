@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import uuid
+import tqdm
 
 import configargparse
 
@@ -89,32 +90,33 @@ def create_unsigned_certificates_from_roster(config):
             r = Recipient(line)
             recipients.append(r)
 
-    with open(template) as template:
-        cert_str = template.read()
-        template = json.loads(cert_str)
-        cur = 0
-        for recipient in recipients:
-            cur = cur + 1
-            print('Proceeding ' + str(cur) + ' of ' + str(len(recipients)) + ' ...') 
-            if config.filename_format == "certname_identity":
-                uid = template['badge']['name'] + recipient.identity
-                uid = "".join(c for c in uid if c.isalnum())
-            else:
-                uid = str(uuid.uuid4())
-            cert_file = os.path.join(output_dir, uid + '.json')
-            if os.path.isfile(cert_file) and config.no_clobber:
-                continue
+    with tqdm.tqdm(total = len(recipients)) as bar:
+        with open(template) as template:
+            cert_str = template.read()
+            template = json.loads(cert_str)
+            cur = 0
+            for recipient in recipients:
+                if config.filename_format == "certname_identity":
+                    uid = template['badge']['name'] + recipient.identity
+                    uid = "".join(c for c in uid if c.isalnum())
+                else:
+                    uid = str(uuid.uuid4())
+                cert_file = os.path.join(output_dir, uid + '.json')
+                if os.path.isfile(cert_file) and config.no_clobber:
+                    continue
 
-            cert = copy.deepcopy(template)
+                cert = copy.deepcopy(template)
 
-            instantiate_assertion(config, cert, uid, issued_on)
-            instantiate_recipient(config, cert, recipient)
+                instantiate_assertion(config, cert, uid, issued_on)
+                instantiate_recipient(config, cert, recipient)
 
-            # validate certificate before writing
-            schema_validator.validate_v2(cert)
+                # validate certificate before writing
+                # schema_validator.validate_v2(cert)
 
-            with open(cert_file, 'w') as unsigned_cert:
-                json.dump(cert, unsigned_cert)
+                with open(cert_file, 'w') as unsigned_cert:
+                    json.dump(cert, unsigned_cert)
+                
+                bar.update(1)
 
 
 def get_config(path = None):
